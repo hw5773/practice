@@ -1,99 +1,329 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <unistd.h>
-#include <getopt.h>
-
 #include "debug.h"
 #include "sip_controller.h"
 
-#define BUF_SIZE 2048
-
-int dtype;
-
-int usage(const char *pname)
+int read_msg(char *input, char *buf, int max)
 {
-  emsg(">> Usage: %s [options]", pname);
-  emsg("Options");
-  emsg("  -i, --input       Input message file");
-  exit(1);
+  assert(input != NULL);
+  assert(buf != NULL);
+  assert(max > 0);
+
+  int len;
+  FILE *fp;
+
+  fp = fopen(input, "r");
+  fseek(fp, 0L, SEEK_END);
+  len = (int)ftell(fp);
+  fseek(fp, 0L, SEEK_SET);
+  fread(buf, 1, len, fp);
+
+  return len;
 }
 
-int main(int argc, char *argv[])
+sip_msg_t *parse_sip_msg(char *buf, int len)
 {
-  char *pname, *input;
-  char buf[BUF_SIZE] = {0, };
-  int c, len, rlen;
-  sip_msg_t *msg;
-  avp_t *avp, *tmp;
-  const uint8_t *key = "v";
-  const uint8_t *value = "SIP/2.0/TCP [2607:fc20:ba53:1539:e495:7fff:fe80:2e48]:40091;rport=40598;branch=z9hG4bK1014822785";
-  uint8_t *res;
+  assert(buf != NULL);
+  assert(len > 0);
 
-  input = NULL;
-  pname = argv[0];
-  dtype = MSG_OUTPUT_PARSER;
+  sip_msg_t *ret;
+  avp_t *avp;
+  uint8_t key[KEY_LENGTH];
+  uint8_t value[VALUE_LENGTH];
+  uint8_t *c, *k, *v;
+  uint8_t *p[2];
+  uint8_t flag, kset;
+  int klen, vlen;
 
-  while (1)
+  ret = (sip_msg_t *)calloc(1, sizeof(sip_msg_t));
+  c = (uint8_t *)buf;
+  p[KEY_IDX] = key;
+  p[VALUE_IDX] = value;
+
+  memcpy(key, "header", 6);
+  p[KEY_IDX] += 6;
+  flag = 1;
+  kset = 0;
+
+  while (c - (uint8_t *)buf < len)
   {
-    int option_index = 0;
-    static struct option long_options[] = {
-      {"input", required_argument, 0, 'i'},
-      {0, 0, 0, 0}
-    };
-
-    const char *opt = "i:0";
-
-    c = getopt_long(argc, argv, opt, long_options, &option_index);
-
-    if (c == -1)
-      break;
-    
-    switch (c)
+    if (*c == ':' && !kset)
     {
-      case 'i':
-        input = optarg;
-        if (access(input, F_OK) != 0)
-        {
-          emsg("The input file (%s) does not exist", input);
-          input = NULL;
-        }
-        break;
+      flag = (flag + 1) % 2;
+      kset = 1;
+    }
+    else if (*c == '\n')
+    {
+      flag = (flag + 1) % 2;
+      klen = p[KEY_IDX] - key;
+      vlen = p[VALUE_IDX] - value;
 
-      default:
-        usage(pname);
+      k = key;
+      while (*k == ' ')
+      {
+        k++;
+        klen--;
+      }
+
+      while (*(k + klen - 1) == ' ')
+      {
+        klen--;
+      }
+
+      v = value;
+      while (*v == ' ')
+      {
+        v++;
+        vlen--;
+      }
+
+      while (*(v + vlen - 1) == ' ')
+      {
+        vlen--;
+      }
+
+      dmsg(MSG_OUTPUT_PARSER, "key (%d bytes): %.*s, value (%d bytes): %.*s", klen, klen, k, vlen, vlen, v);
+      if (klen > 0 && vlen > 0)
+      {
+        avp = init_avp(k, klen, v, vlen);
+        add_avp_to_sip_msg(ret, avp, NULL, 0);
+      }
+
+      p[KEY_IDX] = key;
+      p[VALUE_IDX] = value;
+      kset = 0;
+    }
+    else
+    {
+      *(p[flag]++) = *c;
+    }
+    c++;
+  }
+
+  return ret;
+}
+
+uint8_t *serialize_sip_msg(sip_msg_t *msg, int *len)
+{
+  assert(msg != NULL);
+  assert(len != NULL);
+
+  uint8_t *ret, *p;
+  uint8_t tmp[BUF_LENGTH];
+  avp_t *curr;
+
+  p = tmp;
+  curr = msg->head;
+
+  while (curr)
+  {
+    if (!strncmp(curr->key, "header", curr->klen))
+    {
+      memcpy(p, curr->value, curr->vlen);
+      p += curr->vlen;
+    }
+    else
+    {
+      memcpy(p, curr->key, curr->klen);
+      p += curr->klen;
+
+      memcpy(p, ": ", 2);
+      p += 2;
+
+      memcpy(p, curr->value, curr->vlen);
+      p += curr->vlen;
+    }
+    *(p++) = '\n';
+    curr = curr->next;
+  }
+  
+  *(p++) = '\n';
+  *len = p - tmp;
+  ret = (uint8_t *)malloc(*len);
+  memcpy(ret, tmp, *len);
+
+  return ret;
+}
+
+void print_sip_msg(sip_msg_t *msg)
+{
+  assert(msg != NULL);
+
+  avp_t *curr;
+  curr = msg->head;
+
+  imsg(MSG_OUTPUT_PARSER, "# of avps: %d", msg->num);
+  while (curr)
+  {
+    imsg(MSG_OUTPUT_PARSER, "key (%d bytes): %.*s, value (%d bytes): %.*s", curr->klen, curr->klen, curr->key, 
+        curr->vlen, curr->vlen, curr->value);
+    curr = curr->next;
+  }
+}
+
+sip_msg_t *init_sip_msg(void)
+{
+  sip_msg_t *ret;
+  ret = (sip_msg_t *)calloc(1, sizeof(sip_msg_t));
+
+  return ret;
+}
+
+void free_sip_msg(sip_msg_t *msg)
+{
+  avp_t *curr, *next;
+
+  if (msg)
+  {
+    curr = msg->head;
+    while (curr)
+    {
+      next = curr->next;
+      free_avp(curr);
+      curr = next;
     }
   }
+}
 
-  if (!input)
+avp_t *init_avp(uint8_t *key, int klen, uint8_t *value, int vlen)
+{
+  assert(key != NULL);
+  assert(klen > 0);
+  assert(value != NULL);
+  assert(vlen > 0);
+
+  avp_t *ret;
+  ret = (avp_t *)calloc(1, sizeof(avp_t));
+
+  ret->key = (uint8_t *)calloc(1, klen);
+  memcpy(ret->key, key, klen);
+  ret->klen = klen;
+
+  ret->value = (uint8_t *)calloc(1, vlen);
+  memcpy(ret->value, value, vlen);
+  ret->vlen = vlen;
+
+  return ret;
+}
+
+void free_avp(avp_t *avp)
+{
+  if (avp)
   {
-    emsg("The input file should be inserted");
-    goto out;
+    if (avp->key)
+      free(avp->key);
+    avp->klen = 0;
+    
+    if (avp->value)
+      free(avp->value);
+    avp->value = 0;
+  }
+}
+
+avp_t *get_avp_from_sip_msg(sip_msg_t *msg, uint8_t *key, int klen)
+{
+  assert(msg != NULL);
+  assert(key != NULL);
+  assert(klen > 0);
+
+  avp_t *ret, *curr;
+
+  ret = NULL;
+  curr = msg->head;
+
+  while (curr)
+  {
+    if (curr->klen == klen
+        && !strncmp((const char *)(curr->key), (const char *)key, curr->klen))
+    {
+      ret = curr;
+      break;
+    }
+    curr = curr->next;
   }
 
-  len = read_msg(input, buf, BUF_SIZE);
-  msg = parse_sip_msg(buf, len);
+  return ret;
+}
 
-  imsg(MSG_OUTPUT_PARSER, "Before modification");
-  print_sip_msg(msg);
-  printf("\n");
-  imsg(MSG_OUTPUT_PARSER, "Read message (%d bytes): %s", len, buf);
-  printf("\n");
+void del_avp_from_sip_msg(sip_msg_t *msg, uint8_t *key, int klen)
+{
+  assert(msg != NULL);
+  assert(key != NULL);
+  assert(klen > 0);
 
-  avp = get_avp_from_sip_msg(msg, "f", 1);
-  change_value_from_avp(avp, "changed", 7);
-  del_avp_from_sip_msg(msg, "Via", 3);
-  tmp = init_avp("Hello", 5, "World!", 6);
-  add_avp_to_sip_msg(msg, tmp, "v", 1);
+  avp_t *res, *prev, *curr;
 
-  imsg(MSG_OUTPUT_PARSER, "After modification");
-  print_sip_msg(msg);
-  printf("\n");
+  res = NULL;
+  prev = NULL;
+  curr = msg->head;
 
-  res = serialize_sip_msg(msg, &rlen);
-  free_sip_msg(msg);
-  imsg(MSG_OUTPUT_PARSER, "Final message (%d bytes): %s", rlen, res);
+  while (curr)
+  {
+    if (curr->klen == klen
+        && !strncmp((const char *)(curr->key), (const char *)key, curr->klen))
+    {
+      res = curr;
+      if (!prev)
+        msg->head = curr->next;
+      else
+        prev->next = curr->next;
 
-out:
-  return 0;
+      if (msg->tail == curr)
+        msg->tail = prev;
+      break;
+    }
+    prev = curr;
+    curr = curr->next;
+  }
+
+  if (res)
+  {
+    free_avp(res);
+    msg->num--;
+  }
+}
+
+int add_avp_to_sip_msg(sip_msg_t *msg, avp_t *avp, uint8_t *key, int klen)
+{
+  assert(msg != NULL);
+  assert(avp != NULL);
+
+  avp_t *prev;
+  int ret;
+
+  ret = 0;
+  if (!key)
+    prev = msg->tail;
+  else
+  {
+    prev = get_avp_from_sip_msg(msg, key, klen);
+
+    if (!prev)
+      prev = msg->tail;
+  }
+
+  if (prev)
+  {
+    avp->next = prev->next;
+    prev->next = avp;
+  }
+  else
+  {
+    if (!msg->head)
+      msg->head = avp;
+  }
+
+  if (!prev || (prev == msg->tail))
+    msg->tail = avp;
+
+  ret = SUCCESS;
+  msg->num++;
+  return ret;
+}
+
+void change_value_from_avp(avp_t *avp, uint8_t *value, int vlen)
+{
+  if (avp->value)
+    free(avp->value);
+  avp->value = (uint8_t *)calloc(vlen, 1);
+  avp->vlen = vlen;
+  memcpy(avp->value, value, vlen);
 }

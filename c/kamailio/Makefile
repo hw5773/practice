@@ -1,8 +1,8 @@
 CC=gcc
 RM=rm
 
-BIN=sip_controller
-SRC=sip_controller.c sip_controller_local.c
+BIN=test_sip_controller
+SRC=test_sip_controller.c sip_controller.c
 OBJ=$(SRC:.c=.o)
 CFLAGS=-DDEBUG_LEVEL=2
 LDFLAGS=

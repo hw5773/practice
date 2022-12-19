@@ -3,9 +3,37 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define SUCCESS 1
+#define FAILURE -1
+
+#define KEY_LENGTH 1024
+#define VALUE_LENGTH 16384
+#define BUF_LENGTH 16384
+
+#define KEY_IDX 0
+#define VALUE_IDX 1
 
 typedef struct sip_msg_st sip_msg_t;
 typedef struct avp_st avp_t;
+
+struct avp_st
+{
+  uint8_t *key;
+  int klen;
+  uint8_t *value;
+  int vlen;
+  struct avp_st *next;
+};
+
+struct sip_msg_st
+{
+  int num;
+  struct avp_st *head;
+  struct avp_st *tail;
+};
 
 int read_msg(char *input, char *buf, int max);
 sip_msg_t *parse_sip_msg(char *buf, int len);
