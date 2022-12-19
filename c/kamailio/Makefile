@@ -4,7 +4,7 @@ RM=rm
 BIN=sip_controller
 SRC=sip_controller.c sip_controller_local.c
 OBJ=$(SRC:.c=.o)
-CFLAGS=
+CFLAGS=-DDEBUG_LEVEL=2
 LDFLAGS=
 
 all: $(BIN)

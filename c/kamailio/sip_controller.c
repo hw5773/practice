@@ -24,6 +24,9 @@ int main(int argc, char *argv[])
   char *pname, *input;
   char buf[BUF_SIZE] = {0, };
   int c, len;
+  sip_msg_t *msg;
+  const uint8_t *key = "v";
+  const uint8_t *value = "SIP/2.0/TCP [2607:fc20:ba53:1539:e495:7fff:fe80:2e48]:40091;rport=40598;branch=z9hG4bK1014822785";
 
   input = NULL;
   pname = argv[0];
@@ -67,6 +70,9 @@ int main(int argc, char *argv[])
   }
 
   len = read_msg(input, buf, BUF_SIZE);
+  msg = parse_sip_msg(buf, len);
+  print_sip_msg(msg);
+
   imsg(MSG_OUTPUT_PARSER, "Read message (%d bytes): %s", len, buf);
 
 out:
