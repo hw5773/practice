@@ -10,6 +10,7 @@
 
 #define KEY_LENGTH 1024
 #define VALUE_LENGTH 16384
+#define BUF_LENGTH 16384
 
 #define KEY_IDX 0
 #define VALUE_IDX 1
@@ -29,12 +30,5 @@ struct sip_msg_st
   struct avp_st *head;
   struct avp_st *tail;
 };
-
-avp_t *init_avp(uint8_t *key, int klen, uint8_t *value, int vlen);
-void free_avp(avp_t *avp);
-
-avp_t *get_avp_from_sip_msg(sip_msg_t *msg, uint8_t *key, int klen);
-avp_t *del_avp_from_sip_msg(sip_msg_t *msg, uint8_t *key, int klen);
-int add_avp_to_sip_msg(sip_msg_t *msg, avp_t *avp, uint8_t *key, int klen);
 
 #endif /* __SIP_CONTROLLER_LOCAL_H__ */

@@ -11,7 +11,14 @@ int read_msg(char *input, char *buf, int max);
 sip_msg_t *parse_sip_msg(char *buf, int len);
 void free_sip_msg(sip_msg_t *msg);
 uint8_t *serialize_sip_msg(sip_msg_t *msg, int *len);
-int replace_value_by_key(sip_msg_t *msg, char *key, int klen, char *value, int vlen);
 void print_sip_msg(sip_msg_t *msg);
+
+avp_t *init_avp(uint8_t *key, int klen, uint8_t *value, int vlen);
+void free_avp(avp_t *avp);
+
+avp_t *get_avp_from_sip_msg(sip_msg_t *msg, uint8_t *key, int klen);
+int add_avp_to_sip_msg(sip_msg_t *msg, avp_t *avp, uint8_t *key, int klen);
+void del_avp_from_sip_msg(sip_msg_t *msg, uint8_t *key, int klen);
+void change_value_from_avp(avp_t *avp, uint8_t *value, int vlen);
 
 #endif /* __SIP_CONTROLLER_H__ */

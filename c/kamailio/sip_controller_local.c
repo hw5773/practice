@@ -106,26 +106,39 @@ uint8_t *serialize_sip_msg(sip_msg_t *msg, int *len)
   assert(msg != NULL);
   assert(len != NULL);
 
-  uint8_t *ret;
-  return ret;
-}
+  uint8_t *ret, *p;
+  uint8_t tmp[BUF_LENGTH];
+  avp_t *curr;
 
-int replace_value_by_key(sip_msg_t *msg, char *key, int klen, char *value, int vlen)
-{
-  int ret;
-  avp_t *avp;
+  p = tmp;
+  curr = msg->head;
 
-  avp = get_avp_from_sip_msg(msg, key, klen);
-  if (avp)
+  while (curr)
   {
-    if (avp->value)
-      free(avp->value);
-    avp->vlen = vlen;
-    avp->value = (uint8_t *)calloc(1, vlen);
-    memcpy(avp->value, value, vlen);
+    if (!strncmp(curr->key, "header", curr->klen))
+    {
+      memcpy(p, curr->value, curr->vlen);
+      p += curr->vlen;
+    }
+    else
+    {
+      memcpy(p, curr->key, curr->klen);
+      p += curr->klen;
+
+      memcpy(p, ": ", 2);
+      p += 2;
+
+      memcpy(p, curr->value, curr->vlen);
+      p += curr->vlen;
+    }
+    *(p++) = '\n';
+    curr = curr->next;
   }
-  else
-    ret = FAILURE;
+  
+  *(p++) = '\n';
+  *len = p - tmp;
+  ret = (uint8_t *)malloc(*len);
+  memcpy(ret, tmp, *len);
 
   return ret;
 }
@@ -220,21 +233,25 @@ avp_t *get_avp_from_sip_msg(sip_msg_t *msg, uint8_t *key, int klen)
   {
     if (curr->klen == klen
         && !strncmp((const char *)(curr->key), (const char *)key, curr->klen))
+    {
       ret = curr;
+      break;
+    }
+    curr = curr->next;
   }
 
   return ret;
 }
 
-avp_t *del_avp_from_sip_msg(sip_msg_t *msg, uint8_t *key, int klen)
+void del_avp_from_sip_msg(sip_msg_t *msg, uint8_t *key, int klen)
 {
   assert(msg != NULL);
   assert(key != NULL);
   assert(klen > 0);
 
-  avp_t *ret, *prev, *curr;
+  avp_t *res, *prev, *curr;
 
-  ret = NULL;
+  res = NULL;
   prev = NULL;
   curr = msg->head;
 
@@ -243,7 +260,7 @@ avp_t *del_avp_from_sip_msg(sip_msg_t *msg, uint8_t *key, int klen)
     if (curr->klen == klen
         && !strncmp((const char *)(curr->key), (const char *)key, curr->klen))
     {
-      ret = curr;
+      res = curr;
       if (!prev)
         msg->head = curr->next;
       else
@@ -251,13 +268,17 @@ avp_t *del_avp_from_sip_msg(sip_msg_t *msg, uint8_t *key, int klen)
 
       if (msg->tail == curr)
         msg->tail = prev;
+      break;
     }
+    prev = curr;
+    curr = curr->next;
   }
 
-  if (!ret)
+  if (res)
+  {
+    free_avp(res);
     msg->num--;
-
-  return ret;
+  }
 }
 
 int add_avp_to_sip_msg(sip_msg_t *msg, avp_t *avp, uint8_t *key, int klen)
@@ -296,4 +317,13 @@ int add_avp_to_sip_msg(sip_msg_t *msg, avp_t *avp, uint8_t *key, int klen)
   ret = SUCCESS;
   msg->num++;
   return ret;
+}
+
+void change_value_from_avp(avp_t *avp, uint8_t *value, int vlen)
+{
+  if (avp->value)
+    free(avp->value);
+  avp->value = (uint8_t *)calloc(vlen, 1);
+  avp->vlen = vlen;
+  memcpy(avp->value, value, vlen);
 }
