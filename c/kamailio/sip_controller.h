@@ -5,26 +5,44 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 
-#define SUCCESS 1
-#define FAILURE -1
+#define SC_SUCCESS 1
+#define SC_FAILURE -1
 
-#define KEY_LENGTH 1024
-#define VALUE_LENGTH 16384
-#define BUF_LENGTH 16384
+#define SC_KEY_LENGTH 1024
+#define SC_ATTR_LENGTH 1024
+#define SC_VALUE_LENGTH 16384
+#define SC_BUF_LENGTH 16384
 
-#define KEY_IDX 0
-#define VALUE_IDX 1
+#define SC_KEY_IDX 0
+#define SC_VALUE_IDX 1
 
 typedef struct sip_msg_st sip_msg_t;
 typedef struct avp_st avp_t;
+typedef struct vlst_st vlst_t;
+typedef struct val_st val_t;
+
+struct val_st
+{
+  uint8_t *attr;
+  int alen;
+  uint8_t *val;
+  int vlen;
+  struct val_st *next;
+};
+
+struct vlst_st
+{
+  int num;
+  struct val_st *head;
+};
 
 struct avp_st
 {
   uint8_t *key;
   int klen;
-  uint8_t *value;
-  int vlen;
+  struct vlst_st *vlst;
   struct avp_st *next;
 };
 
@@ -48,5 +66,7 @@ avp_t *get_avp_from_sip_msg(sip_msg_t *msg, uint8_t *key, int klen);
 int add_avp_to_sip_msg(sip_msg_t *msg, avp_t *avp, uint8_t *key, int klen);
 void del_avp_from_sip_msg(sip_msg_t *msg, uint8_t *key, int klen);
 void change_value_from_avp(avp_t *avp, uint8_t *value, int vlen);
+
+int is_attribute_included(avp_t *avp, uint8_t *attr, int alen);
 
 #endif /* __SIP_CONTROLLER_H__ */

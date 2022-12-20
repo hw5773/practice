@@ -1,5 +1,6 @@
-#include "debug.h"
 #include "sip_controller.h"
+
+uint8_t *serialize_value(avp_t *avp, int *vlen);
 
 int read_msg(char *input, char *buf, int max)
 {
@@ -26,8 +27,8 @@ sip_msg_t *parse_sip_msg(char *buf, int len)
 
   sip_msg_t *ret;
   avp_t *avp;
-  uint8_t key[KEY_LENGTH];
-  uint8_t value[VALUE_LENGTH];
+  uint8_t key[SC_KEY_LENGTH];
+  uint8_t value[SC_VALUE_LENGTH];
   uint8_t *c, *k, *v;
   uint8_t *p[2];
   uint8_t flag, kset;
@@ -35,11 +36,11 @@ sip_msg_t *parse_sip_msg(char *buf, int len)
 
   ret = (sip_msg_t *)calloc(1, sizeof(sip_msg_t));
   c = (uint8_t *)buf;
-  p[KEY_IDX] = key;
-  p[VALUE_IDX] = value;
+  p[SC_KEY_IDX] = key;
+  p[SC_VALUE_IDX] = value;
 
   memcpy(key, "header", 6);
-  p[KEY_IDX] += 6;
+  p[SC_KEY_IDX] += 6;
   flag = 1;
   kset = 0;
 
@@ -53,8 +54,8 @@ sip_msg_t *parse_sip_msg(char *buf, int len)
     else if (*c == '\n')
     {
       flag = (flag + 1) % 2;
-      klen = p[KEY_IDX] - key;
-      vlen = p[VALUE_IDX] - value;
+      klen = p[SC_KEY_IDX] - key;
+      vlen = p[SC_VALUE_IDX] - value;
 
       k = key;
       while (*k == ' ')
@@ -80,15 +81,14 @@ sip_msg_t *parse_sip_msg(char *buf, int len)
         vlen--;
       }
 
-      dmsg(MSG_OUTPUT_PARSER, "key (%d bytes): %.*s, value (%d bytes): %.*s", klen, klen, k, vlen, vlen, v);
       if (klen > 0 && vlen > 0)
       {
         avp = init_avp(k, klen, v, vlen);
         add_avp_to_sip_msg(ret, avp, NULL, 0);
       }
 
-      p[KEY_IDX] = key;
-      p[VALUE_IDX] = value;
+      p[SC_KEY_IDX] = key;
+      p[SC_VALUE_IDX] = value;
       kset = 0;
     }
     else
@@ -106,8 +106,9 @@ uint8_t *serialize_sip_msg(sip_msg_t *msg, int *len)
   assert(msg != NULL);
   assert(len != NULL);
 
-  uint8_t *ret, *p;
-  uint8_t tmp[BUF_LENGTH];
+  uint8_t *ret, *p, *vtmp;
+  uint8_t tmp[SC_BUF_LENGTH];
+  int vlen;
   avp_t *curr;
 
   p = tmp;
@@ -115,22 +116,17 @@ uint8_t *serialize_sip_msg(sip_msg_t *msg, int *len)
 
   while (curr)
   {
-    if (!strncmp(curr->key, "header", curr->klen))
-    {
-      memcpy(p, curr->value, curr->vlen);
-      p += curr->vlen;
-    }
-    else
+    if (strncmp(curr->key, "header", curr->klen))
     {
       memcpy(p, curr->key, curr->klen);
       p += curr->klen;
 
       memcpy(p, ": ", 2);
       p += 2;
-
-      memcpy(p, curr->value, curr->vlen);
-      p += curr->vlen;
     }
+    vtmp = serialize_value(curr, &vlen);
+    memcpy(p, vtmp, vlen);
+    p += vlen;
     *(p++) = '\n';
     curr = curr->next;
   }
@@ -148,13 +144,15 @@ void print_sip_msg(sip_msg_t *msg)
   assert(msg != NULL);
 
   avp_t *curr;
+  uint8_t *value;
+  int vlen;
   curr = msg->head;
 
-  imsg(MSG_OUTPUT_PARSER, "# of avps: %d", msg->num);
+  printf(">>> # of avps: %d\n", msg->num);
   while (curr)
   {
-    imsg(MSG_OUTPUT_PARSER, "key (%d bytes): %.*s, value (%d bytes): %.*s", curr->klen, curr->klen, curr->key, 
-        curr->vlen, curr->vlen, curr->value);
+    value = serialize_value(curr, &vlen);
+    printf("key (%d bytes): %.*s, value (%d bytes): %.*s\n", curr->klen, curr->klen, curr->key, vlen, vlen, value);
     curr = curr->next;
   }
 }
@@ -183,6 +181,164 @@ void free_sip_msg(sip_msg_t *msg)
   }
 }
 
+val_t *init_val(uint8_t *val, int len)
+{
+  val_t *ret;
+  int tlen;
+  uint8_t *p, *t;
+  uint8_t tmp[SC_BUF_LENGTH] = {0, };
+  ret = (val_t *)calloc(1, sizeof(val_t));
+
+  p = val;
+  t = tmp;
+  while (p - val <= len)
+  {
+    if (*p == '=')
+    {
+      tlen = t-tmp;
+      ret->attr = (uint8_t *)calloc(1, tlen);
+      memcpy(ret->attr, tmp, tlen);
+      ret->alen = tlen;
+      t = tmp;
+    }
+    else if (p - val == len)
+    {
+      tlen = t-tmp;
+      ret->val = (uint8_t *)calloc(1, tlen);
+      memcpy(ret->val, tmp, tlen);
+      ret->vlen = tlen;
+    }
+    else
+    {
+      *(t++) = *p;
+    }
+
+    p++;
+  }
+
+  return ret;
+}
+
+void free_val(val_t *val)
+{
+  if (val)
+  {
+    if (val->attr)
+      free(val->attr);
+    val->alen = 0;
+
+    if (val->val)
+      free(val->val);
+    val->vlen = 0;
+  }
+}
+
+uint8_t *serialize_value(avp_t *avp, int *vlen)
+{
+  assert(avp != NULL);
+  assert(vlen != NULL);
+
+  uint8_t *ret, *p;
+  uint8_t tmp[SC_BUF_LENGTH] = {0, };
+  vlst_t *vlst;
+  val_t *val;
+
+  vlst = avp->vlst;
+  p = tmp;
+
+  val = vlst->head;
+  while (val)
+  {
+    if (val->attr)
+    {
+      memcpy(p, val->attr, val->alen);
+      p += val->alen;
+      *(p++) = '=';
+    }
+    memcpy(p, val->val, val->vlen);
+    p += val->vlen;
+
+    val = val->next;
+  }
+  *vlen = p-tmp;
+  ret = (uint8_t *)malloc(*vlen);
+  memcpy(ret, tmp, *vlen);
+
+  return ret;
+}
+
+void add_val_to_vlst(vlst_t *vlst, val_t *val)
+{
+  assert(vlst != NULL);
+  assert(val != NULL);
+
+  val_t *curr;
+  curr = vlst->head;
+
+  if (!curr)
+  {
+    vlst->head = val;
+  }
+  else
+  {
+    while (curr->next)
+    {
+      curr = curr->next;
+    }
+    curr->next = val;
+  }
+}
+
+vlst_t *init_vlst(uint8_t *value, int vlen)
+{
+  vlst_t *ret;
+  val_t *val;
+  int tlen;
+  uint8_t *p, *q;
+  uint8_t tmp[SC_BUF_LENGTH] = {0, };
+  
+  ret = (vlst_t *)calloc(1, sizeof(vlst_t));
+
+  p = value;
+  q = tmp;
+  while (p - value <= vlen)
+  {
+    if (*p == ';' || *p == '\n' || p - value == vlen)
+    {
+      tlen = q - tmp;
+      val = init_val(tmp, tlen);
+      add_val_to_vlst(ret, val);
+      q = tmp;
+      memset(tmp, 0, SC_BUF_LENGTH);
+    }
+    else
+    {
+      *(q++) = *p;
+    }
+    p++;
+  }
+
+  return ret;
+}
+
+void free_vlst(vlst_t *vlst)
+{
+  val_t *curr, *next;
+
+  if (vlst)
+  {
+    curr = vlst->head;
+
+    while (curr)
+    {
+      next = curr->next;
+      free_val(curr);
+      curr = next;
+    }
+    free(vlst);
+  }
+}
+
 avp_t *init_avp(uint8_t *key, int klen, uint8_t *value, int vlen)
 {
   assert(key != NULL);
@@ -197,9 +353,7 @@ avp_t *init_avp(uint8_t *key, int klen, uint8_t *value, int vlen)
   memcpy(ret->key, key, klen);
   ret->klen = klen;
 
-  ret->value = (uint8_t *)calloc(1, vlen);
-  memcpy(ret->value, value, vlen);
-  ret->vlen = vlen;
+  ret->vlst = init_vlst(value, vlen);
 
   return ret;
 }
@@ -212,9 +366,8 @@ void free_avp(avp_t *avp)
       free(avp->key);
     avp->klen = 0;
     
-    if (avp->value)
-      free(avp->value);
-    avp->value = 0;
+    if (avp->vlst)
+      free_vlst(avp->vlst);
   }
 }
 
@@ -314,16 +467,12 @@ int add_avp_to_sip_msg(sip_msg_t *msg, avp_t *avp, uint8_t *key, int klen)
   if (!prev || (prev == msg->tail))
     msg->tail = avp;
 
-  ret = SUCCESS;
+  ret = SC_SUCCESS;
   msg->num++;
   return ret;
 }
 
 void change_value_from_avp(avp_t *avp, uint8_t *value, int vlen)
 {
-  if (avp->value)
-    free(avp->value);
-  avp->value = (uint8_t *)calloc(vlen, 1);
-  avp->vlen = vlen;
-  memcpy(avp->value, value, vlen);
+  //TODO: Need to implement this function again
 }
