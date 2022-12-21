@@ -249,6 +249,9 @@ uint8_t *serialize_value(avp_t *avp, int *vlen)
   val = vlst->head;
   while (val)
   {
+    if (val != vlst->head)
+      *(p++) = ';';
+
     if (val->attr)
     {
       memcpy(p, val->attr, val->alen);
@@ -472,7 +475,91 @@ int add_avp_to_sip_msg(sip_msg_t *msg, avp_t *avp, uint8_t *key, int klen)
   return ret;
 }
 
-void change_value_from_avp(avp_t *avp, uint8_t *value, int vlen)
+int is_attribute_included(avp_t *avp, uint8_t *attr, int alen)
 {
-  //TODO: Need to implement this function again
+  assert(avp != NULL);
+  assert(attr != NULL);
+  assert(alen > 0);
+
+  int ret;
+  vlst_t *vlst;
+  val_t *val;
+
+  ret = SC_FALSE;
+  vlst = avp->vlst;
+  val = vlst->head;
+
+  while (val)
+  {
+    if (val->alen == alen 
+        && !strncmp(val->attr, attr, alen))
+    {
+      ret = SC_TRUE;
+      break;
+    }
+    val = val->next;
+  }
+
+  return ret;
+}
+
+uint8_t *get_value_from_avp(avp_t *avp, uint8_t *attr, int alen, int *vlen)
+{
+  assert(avp != NULL);
+  assert(attr != NULL);
+  assert(alen > 0);
+  assert(vlen != NULL);
+
+  uint8_t *ret;
+  vlst_t *vlst;
+  val_t *val;
+
+  ret = NULL;
+  vlst = avp->vlst;
+  val = vlst->head;
+
+  while (val)
+  {
+    if (val->alen == alen 
+        && !strncmp(val->attr, attr, alen))
+    {
+      ret = (uint8_t *)malloc(val->vlen);
+      memcpy(ret, val->val, val->vlen);
+      *vlen = val->vlen;
+      break;
+    }
+    val = val->next;
+  }
+
+  return ret;
+}
+
+void change_value_from_avp(avp_t *avp, uint8_t *attr, int alen, uint8_t *value, int vlen)
+{
+  assert(avp != NULL);
+  assert(attr != NULL);
+  assert(alen > 0);
+  assert(value != NULL);
+  assert(vlen > 0);
+
+  vlst_t *vlst;
+  val_t *val;
+
+  vlst = avp->vlst;
+  val = vlst->head;
+
+  while (val)
+  {
+    if (val->alen == alen 
+        && !strncmp(val->attr, attr, alen))
+    {
+      if (val->val)
+        free(val->val);
+      printf("value: %.*s, vlen: %d\n", vlen, value, vlen);
+      val->val = (uint8_t *)malloc(vlen);
+      memcpy(val->val, value, vlen);
+      val->vlen = vlen;
+    }
+    val = val->next;
+  }
 }

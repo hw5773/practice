@@ -23,12 +23,10 @@ int main(int argc, char *argv[])
 {
   char *pname, *input;
   char buf[BUF_SIZE] = {0, };
-  int c, len, rlen;
+  int c, len, rlen, vlen, vint;
   sip_msg_t *msg;
-  avp_t *avp, *tmp;
-  const uint8_t *key = "v";
-  const uint8_t *value = "SIP/2.0/TCP [2607:fc20:ba53:1539:e495:7fff:fe80:2e48]:40091;rport=40598;branch=z9hG4bK1014822785";
-  uint8_t *res;
+  avp_t *avp, *tmp, *storage[10];
+  uint8_t *res, *val;
 
   input = NULL;
   pname = argv[0];
@@ -81,10 +79,22 @@ int main(int argc, char *argv[])
   printf("\n");
 
   avp = get_avp_from_sip_msg(msg, "f", 1);
-  change_value_from_avp(avp, "changed", 7);
   del_avp_from_sip_msg(msg, "Via", 3);
   tmp = init_avp("Hello", 5, "World!", 6);
-  add_avp_to_sip_msg(msg, tmp, "v", 1);
+  add_avp_to_sip_msg(msg, tmp, "i", 1);
+  avp = get_avp_from_sip_msg(msg, "Via", 3);
+
+  if (is_attribute_included(avp, "rport", 5))
+  {
+    val = get_value_from_avp(avp, "rport", 5, &vlen);
+    vint = atoi(val) - 30000;
+    free(val);
+    val = (uint8_t *)calloc(6, sizeof(uint8_t));
+    vlen = snprintf(val, 6, "%d", vint);
+    
+    change_value_from_avp(avp, "rport", 5, val, vlen);
+    free(val);
+  }
 
   imsg(MSG_OUTPUT_PARSER, "After modification");
   print_sip_msg(msg);

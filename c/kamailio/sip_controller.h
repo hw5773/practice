@@ -10,6 +10,9 @@
 #define SC_SUCCESS 1
 #define SC_FAILURE -1
 
+#define SC_TRUE 1
+#define SC_FALSE 0
+
 #define SC_KEY_LENGTH 1024
 #define SC_ATTR_LENGTH 1024
 #define SC_VALUE_LENGTH 16384
@@ -65,8 +68,9 @@ void free_avp(avp_t *avp);
 avp_t *get_avp_from_sip_msg(sip_msg_t *msg, uint8_t *key, int klen);
 int add_avp_to_sip_msg(sip_msg_t *msg, avp_t *avp, uint8_t *key, int klen);
 void del_avp_from_sip_msg(sip_msg_t *msg, uint8_t *key, int klen);
-void change_value_from_avp(avp_t *avp, uint8_t *value, int vlen);
 
 int is_attribute_included(avp_t *avp, uint8_t *attr, int alen);
+uint8_t *get_value_from_avp(avp_t *avp, uint8_t *attr, int alen, int *vlen);
+void change_value_from_avp(avp_t *avp, uint8_t *attr, int alen, uint8_t *value, int vlen);
 
 #endif /* __SIP_CONTROLLER_H__ */

@@ -1,0 +1,17 @@
+SIP/2.0 200 OK
+f: <sip:310260248416121@ims.mnc260.mcc310.3gppnetwork.org>;tag=1668600050
+t: <sip:310260248416121@ims.mnc260.mcc310.3gppnetwork.org>;tag=c106c02ec13758cfe3e38314f3525ff9-24a43e6c
+CSeq: 594856734 REGISTER
+i: 1668598557_4026705148@2607:fc20:ba53:1539:e495:7fff:fe80:2e48
+Via: SIP/2.0/TCP 127.0.0.2:4060;branch=z9hG4bKb8f6.54600e905b4d9c385e32e5161b7aec4b.0;i=1
+Via: SIP/2.0/TCP 127.0.0.1;branch=z9hG4bKb8f6.ef4747d55cfccb9920dcbd4ddfae552d.0;i=3
+Via: SIP/2.0/TCP [2607:fc20:ba53:1539:e495:7fff:fe80:2e48]:40091;rport=40598;keep;branch=z9hG4bK1014822785
+Contact: <sip:b512ed33-6aa9-4f7d-a2bc-c09f36cd2a67@[2607:fc20:ba53:1539:e495:7fff:fe80:2e48]:40091;alias=[2607:FC20:BA53:1539:E495:7FFF:FE80:2E48]~40598~2;transport=tcp>;expires=540000;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel";+g.3gpp.smsip;+g.3gpp.nw-init-ussi;text;audio;+sip.instance="<urn:gsma:imei:86895706-014498-0>";mobility="mobile";reg-id="1";+g.3gpp.accesstype="wlan1"
+Path: <sip:term@pcscf.ims.mnc260.mcc310.3gppnetwork.org;lr>
+P-Associated-URI: <sip:17657759217@msg.pc.t-mobile.com>, <sip:310260248416121@ims.mnc260.mcc310.3gppnetwork.org>, <sip:+17657759217@ims.mnc260.mcc310.3gppnetwork.org>, <sip:+17657759217@msg.pc.t-mobile.com>
+Service-Route: <sip:orig@scscf.ims.mnc260.mcc310.3gppnetwork.org:6060;lr>
+Server: T-mobile
+Content-Length: 0
+
+
+
