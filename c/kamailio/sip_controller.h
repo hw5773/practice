@@ -65,9 +65,10 @@ void print_sip_msg(sip_msg_t *msg);
 avp_t *init_avp(uint8_t *key, int klen, uint8_t *value, int vlen);
 void free_avp(avp_t *avp);
 
-avp_t *get_avp_from_sip_msg(sip_msg_t *msg, uint8_t *key, int klen);
-int add_avp_to_sip_msg(sip_msg_t *msg, avp_t *avp, uint8_t *key, int klen);
-void del_avp_from_sip_msg(sip_msg_t *msg, uint8_t *key, int klen);
+int get_num_of_avps_from_sip_msg(sip_msg_t *msg, uint8_t *key, int klen);
+avp_t *get_avp_from_sip_msg(sip_msg_t *msg, uint8_t *key, int klen, int idx);
+int add_avp_to_sip_msg(sip_msg_t *msg, avp_t *avp, uint8_t *key, int klen, int idx);
+void del_avp_from_sip_msg(sip_msg_t *msg, uint8_t *key, int klen, int idx);
 
 int is_attribute_included(avp_t *avp, uint8_t *attr, int alen);
 uint8_t *get_value_from_avp(avp_t *avp, uint8_t *attr, int alen, int *vlen);

@@ -23,14 +23,16 @@ int main(int argc, char *argv[])
 {
   char *pname, *input;
   char buf[BUF_SIZE] = {0, };
-  int c, len, rlen, vlen, vint;
+  int c, i, len, rlen, vlen, vint, num;
   sip_msg_t *msg;
   avp_t *avp, *tmp, *storage[10];
   uint8_t *res, *val;
+  uint8_t found;
 
   input = NULL;
   pname = argv[0];
   dtype = MSG_OUTPUT_PARSER;
+  found = SC_FALSE;
 
   while (1)
   {
@@ -78,13 +80,22 @@ int main(int argc, char *argv[])
   imsg(MSG_OUTPUT_PARSER, "Read message (%d bytes): %s", len, buf);
   printf("\n");
 
-  avp = get_avp_from_sip_msg(msg, "f", 1);
-  del_avp_from_sip_msg(msg, "Via", 3);
+  avp = get_avp_from_sip_msg(msg, "f", 1, 0);
   tmp = init_avp("Hello", 5, "World!", 6);
-  add_avp_to_sip_msg(msg, tmp, "i", 1);
-  avp = get_avp_from_sip_msg(msg, "Via", 3);
+  add_avp_to_sip_msg(msg, tmp, "i", 1, 0);
 
-  if (is_attribute_included(avp, "rport", 5))
+  num = get_num_of_avps_from_sip_msg(msg, "Via", 3);
+  for (i=0; i<num; i++)
+  {
+    avp = get_avp_from_sip_msg(msg, "Via", 3, i);
+    if (is_attribute_included(avp, "rport", 5))
+    {
+      found = SC_TRUE;
+      break;
+    }
+  }
+
+  if (found)
   {
     val = get_value_from_avp(avp, "rport", 5, &vlen);
     vint = atoi(val) - 30000;
