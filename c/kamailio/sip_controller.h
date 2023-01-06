@@ -21,8 +21,8 @@
 #define SC_KEY_IDX 0
 #define SC_VALUE_IDX 1
 
-typedef struct sip_msg_st sip_msg_t;
-typedef struct avp_st avp_t;
+typedef struct sip_message_st sip_message_t;
+typedef struct kvp_st kvp_t;
 typedef struct vlst_st vlst_t;
 typedef struct val_st val_t;
 
@@ -41,42 +41,42 @@ struct vlst_st
   struct val_st *head;
 };
 
-struct avp_st
+struct kvp_st
 {
   uint8_t *key;
   int klen;
   struct vlst_st *vlst;
-  struct avp_st *next;
+  struct kvp_st *next;
 };
 
-struct sip_msg_st
+struct sip_message_st
 {
   int num;
-  struct avp_st *head;
-  struct avp_st *tail;
+  struct kvp_st *head;
+  struct kvp_st *tail;
 };
 
-int read_msg(char *input, char *buf, int max);
-sip_msg_t *parse_sip_msg(char *buf, int len);
-void free_sip_msg(sip_msg_t *msg);
-uint8_t *serialize_sip_msg(sip_msg_t *msg, int *len);
-void print_sip_msg(sip_msg_t *msg);
+int read_message(char *input, char *buf, int max);
+sip_message_t *init_sip_message(char *buf, int len);
+void free_sip_message(sip_message_t *message);
+uint8_t *serialize_sip_message(sip_message_t *message, int *len);
+void print_sip_message(sip_message_t *message);
 
-avp_t *init_avp(uint8_t *key, int klen, uint8_t *value, int vlen);
-void free_avp(avp_t *avp);
+kvp_t *init_kvp(uint8_t *key, int klen, uint8_t *value, int vlen);
+void free_kvp(kvp_t *kvp);
 
-int is_401_unauthorized_msg(sip_msg_t *msg);
-int is_200_ok_msg(sip_msg_t *msg);
-int get_num_of_avps_from_sip_msg(sip_msg_t *msg, uint8_t *key, int klen);
-avp_t *get_avp_from_sip_msg(sip_msg_t *msg, uint8_t *key, int klen, int idx);
-int add_avp_to_sip_msg(sip_msg_t *msg, avp_t *avp, uint8_t *key, int klen, int idx);
-void del_avp_from_sip_msg(sip_msg_t *msg, uint8_t *key, int klen, int idx);
+int is_401_unauthorized_message(sip_message_t *message);
+int is_200_ok_message(sip_message_t *message);
+int get_num_of_kvps_from_sip_message(sip_message_t *message, uint8_t *key, int klen);
+kvp_t *get_kvp_from_sip_message(sip_message_t *message, uint8_t *key, int klen, int idx);
+int add_kvp_to_sip_message(sip_message_t *message, kvp_t *kvp, uint8_t *key, int klen, int idx);
+void del_kvp_from_sip_message(sip_message_t *message, uint8_t *key, int klen, int idx);
 
-int is_attribute_included(avp_t *avp, uint8_t *attr, int alen);
-int get_num_of_values_from_avp(avp_t *avp);
-uint8_t *get_value_from_avp_by_idx(avp_t *avp, int idx, int *vlen);
-uint8_t *get_value_from_avp_by_name(avp_t *avp, uint8_t *attr, int alen, int *vlen);
-void change_value_from_avp_by_idx(avp_t *avp, int idx, uint8_t *value, int vlen);
-void change_value_from_avp_by_name(avp_t *avp, uint8_t *attr, int alen, uint8_t *value, int vlen);
+int is_attribute_included(kvp_t *kvp, uint8_t *attr, int alen);
+int get_num_of_values_from_kvp(kvp_t *kvp);
+uint8_t *get_value_from_kvp_by_idx(kvp_t *kvp, int idx, int *vlen);
+uint8_t *get_value_from_kvp_by_name(kvp_t *kvp, uint8_t *attr, int alen, int *vlen);
+void change_value_from_kvp_by_idx(kvp_t *kvp, int idx, uint8_t *value, int vlen);
+void change_value_from_kvp_by_name(kvp_t *kvp, uint8_t *attr, int alen, uint8_t *value, int vlen);
 
 #endif /* __SIP_CONTROLLER_H__ */

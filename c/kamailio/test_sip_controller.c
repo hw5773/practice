@@ -24,8 +24,8 @@ int main(int argc, char *argv[])
   char *pname, *input;
   char buf[BUF_SIZE] = {0, };
   int c, i, len, rlen, vlen, vint, num;
-  sip_msg_t *msg;
-  avp_t *avp, *tmp, *storage[10];
+  sip_message_t *message;
+  kvp_t *kvp, *tmp, *storage[10];
   const uint8_t *str;
   uint8_t *res, *val;
   uint8_t found;
@@ -72,10 +72,10 @@ int main(int argc, char *argv[])
     goto out;
   }
 
-  len = read_msg(input, buf, BUF_SIZE);
-  msg = parse_sip_msg(buf, len);
+  len = read_message(input, buf, BUF_SIZE);
+  message = init_sip_message(buf, len);
 
-  if (is_401_unauthorized_msg(msg))
+  if (is_401_unauthorized_message(message))
   {
     imsg(MSG_OUTPUT_PARSER, "This SIP message is a 401 unauthorized message");
   }
@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
     imsg(MSG_OUTPUT_PARSER, "This SIP message is not a 401 unauthorized message");
   }
 
-  if (is_200_ok_msg(msg))
+  if (is_200_ok_message(message))
   {
     imsg(MSG_OUTPUT_PARSER, "This SIP message is a 200 OK message");
   }
@@ -94,20 +94,20 @@ int main(int argc, char *argv[])
   }
 
   imsg(MSG_OUTPUT_PARSER, "Before modification");
-  print_sip_msg(msg);
+  print_sip_message(message);
   printf("\n");
   imsg(MSG_OUTPUT_PARSER, "Read message (%d bytes): %s", len, buf);
   printf("\n");
 
-  avp = get_avp_from_sip_msg(msg, "f", 1, 0);
-  tmp = init_avp("Hello", 5, "World!", 6);
-  add_avp_to_sip_msg(msg, tmp, "i", 1, 0);
+  kvp = get_kvp_from_sip_message(message, "f", 1, 0);
+  tmp = init_kvp("Hello", 5, "World!", 6);
+  add_kvp_to_sip_message(message, tmp, "i", 1, 0);
 
-  num = get_num_of_avps_from_sip_msg(msg, "Via", 3);
+  num = get_num_of_kvps_from_sip_message(message, "Via", 3);
   for (i=0; i<num; i++)
   {
-    avp = get_avp_from_sip_msg(msg, "Via", 3, i);
-    if (is_attribute_included(avp, "rport", 5))
+    kvp = get_kvp_from_sip_message(message, "Via", 3, i);
+    if (is_attribute_included(kvp, "rport", 5))
     {
       found = SC_TRUE;
       break;
@@ -116,22 +116,22 @@ int main(int argc, char *argv[])
 
   if (found)
   {
-    val = get_value_from_avp_by_name(avp, "rport", 5, &vlen);
+    val = get_value_from_kvp_by_name(kvp, "rport", 5, &vlen);
     vint = atoi(val) - 30000;
     free(val);
     val = (uint8_t *)calloc(6, sizeof(uint8_t));
     vlen = snprintf(val, 6, "%d", vint);
     
-    change_value_from_avp_by_name(avp, "rport", 5, val, vlen);
+    change_value_from_kvp_by_name(kvp, "rport", 5, val, vlen);
     free(val);
   }
 
-  avp = get_avp_from_sip_msg(msg, "CSeq", 4, 0);
-  num = get_num_of_values_from_avp(avp);
+  kvp = get_kvp_from_sip_message(message, "CSeq", 4, 0);
+  num = get_num_of_values_from_kvp(kvp);
   imsg(MSG_OUTPUT_PARSER, "  # of values: %d", num);
   for (i=0; i<num; i++)
   {
-    val = get_value_from_avp_by_idx(avp, i, &vlen);
+    val = get_value_from_kvp_by_idx(kvp, i, &vlen);
     imsg(MSG_OUTPUT_PARSER, "  Value: %.*s", vlen, val);
   }
   str = "3 REGISTER";
@@ -139,15 +139,15 @@ int main(int argc, char *argv[])
   memcpy(val, str, strlen(str));
   vlen = strlen(val);
 
-  change_value_from_avp_by_idx(avp, 0, val, vlen);
+  change_value_from_kvp_by_idx(kvp, 0, val, vlen);
   free(val);
 
   imsg(MSG_OUTPUT_PARSER, "After modification");
-  print_sip_msg(msg);
+  print_sip_message(message);
   printf("\n");
 
-  res = serialize_sip_msg(msg, &rlen);
-  free_sip_msg(msg);
+  res = serialize_sip_message(message, &rlen);
+  free_sip_message(message);
   imsg(MSG_OUTPUT_PARSER, "Final message (%d bytes): %s", rlen, res);
 
 out:

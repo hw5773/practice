@@ -1,8 +1,8 @@
 #include "sip_controller.h"
 
-uint8_t *serialize_value(avp_t *avp, int *vlen);
+uint8_t *serialize_value(kvp_t *kvp, int *vlen);
 
-int read_msg(char *input, char *buf, int max)
+int read_message(char *input, char *buf, int max)
 {
   assert(input != NULL);
   assert(buf != NULL);
@@ -20,13 +20,13 @@ int read_msg(char *input, char *buf, int max)
   return len;
 }
 
-sip_msg_t *parse_sip_msg(char *buf, int len)
+sip_message_t *init_sip_message(char *buf, int len)
 {
   assert(buf != NULL);
   assert(len > 0);
 
-  sip_msg_t *ret;
-  avp_t *avp;
+  sip_message_t *ret;
+  kvp_t *kvp;
   uint8_t key[SC_KEY_LENGTH];
   uint8_t value[SC_VALUE_LENGTH];
   uint8_t *c, *k, *v;
@@ -34,7 +34,7 @@ sip_msg_t *parse_sip_msg(char *buf, int len)
   uint8_t flag, kset;
   int klen, vlen;
 
-  ret = (sip_msg_t *)calloc(1, sizeof(sip_msg_t));
+  ret = (sip_message_t *)calloc(1, sizeof(sip_message_t));
   c = (uint8_t *)buf;
   p[SC_KEY_IDX] = key;
   p[SC_VALUE_IDX] = value;
@@ -83,8 +83,8 @@ sip_msg_t *parse_sip_msg(char *buf, int len)
 
       if (klen > 0 && vlen > 0)
       {
-        avp = init_avp(k, klen, v, vlen);
-        add_avp_to_sip_msg(ret, avp, NULL, 0, 0);
+        kvp = init_kvp(k, klen, v, vlen);
+        add_kvp_to_sip_message(ret, kvp, NULL, 0, 0);
       }
 
       p[SC_KEY_IDX] = key;
@@ -101,18 +101,18 @@ sip_msg_t *parse_sip_msg(char *buf, int len)
   return ret;
 }
 
-uint8_t *serialize_sip_msg(sip_msg_t *msg, int *len)
+uint8_t *serialize_sip_message(sip_message_t *message, int *len)
 {
-  assert(msg != NULL);
+  assert(message != NULL);
   assert(len != NULL);
 
   uint8_t *ret, *p, *vtmp;
   uint8_t tmp[SC_BUF_LENGTH];
   int vlen;
-  avp_t *curr;
+  kvp_t *curr;
 
   p = tmp;
-  curr = msg->head;
+  curr = message->head;
 
   while (curr)
   {
@@ -139,16 +139,16 @@ uint8_t *serialize_sip_msg(sip_msg_t *msg, int *len)
   return ret;
 }
 
-void print_sip_msg(sip_msg_t *msg)
+void print_sip_message(sip_message_t *message)
 {
-  assert(msg != NULL);
+  assert(message != NULL);
 
-  avp_t *curr;
+  kvp_t *curr;
   uint8_t *value;
   int vlen;
-  curr = msg->head;
+  curr = message->head;
 
-  printf(">>> # of avps: %d\n", msg->num);
+  printf(">>> # of kvps: %d\n", message->num);
   while (curr)
   {
     value = serialize_value(curr, &vlen);
@@ -157,25 +157,17 @@ void print_sip_msg(sip_msg_t *msg)
   }
 }
 
-sip_msg_t *init_sip_msg(void)
+void free_sip_message(sip_message_t *message)
 {
-  sip_msg_t *ret;
-  ret = (sip_msg_t *)calloc(1, sizeof(sip_msg_t));
+  kvp_t *curr, *next;
 
-  return ret;
-}
-
-void free_sip_msg(sip_msg_t *msg)
-{
-  avp_t *curr, *next;
-
-  if (msg)
+  if (message)
   {
-    curr = msg->head;
+    curr = message->head;
     while (curr)
     {
       next = curr->next;
-      free_avp(curr);
+      free_kvp(curr);
       curr = next;
     }
   }
@@ -233,9 +225,9 @@ void free_val(val_t *val)
   }
 }
 
-uint8_t *serialize_value(avp_t *avp, int *vlen)
+uint8_t *serialize_value(kvp_t *kvp, int *vlen)
 {
-  assert(avp != NULL);
+  assert(kvp != NULL);
   assert(vlen != NULL);
 
   uint8_t *ret, *p;
@@ -243,7 +235,7 @@ uint8_t *serialize_value(avp_t *avp, int *vlen)
   vlst_t *vlst;
   val_t *val;
 
-  vlst = avp->vlst;
+  vlst = kvp->vlst;
   p = tmp;
 
   val = vlst->head;
@@ -343,15 +335,15 @@ void free_vlst(vlst_t *vlst)
   }
 }
 
-avp_t *init_avp(uint8_t *key, int klen, uint8_t *value, int vlen)
+kvp_t *init_kvp(uint8_t *key, int klen, uint8_t *value, int vlen)
 {
   assert(key != NULL);
   assert(klen > 0);
   assert(value != NULL);
   assert(vlen > 0);
 
-  avp_t *ret;
-  ret = (avp_t *)calloc(1, sizeof(avp_t));
+  kvp_t *ret;
+  ret = (kvp_t *)calloc(1, sizeof(kvp_t));
 
   ret->key = (uint8_t *)calloc(1, klen);
   memcpy(ret->key, key, klen);
@@ -362,32 +354,32 @@ avp_t *init_avp(uint8_t *key, int klen, uint8_t *value, int vlen)
   return ret;
 }
 
-void free_avp(avp_t *avp)
+void free_kvp(kvp_t *kvp)
 {
-  if (avp)
+  if (kvp)
   {
-    if (avp->key)
-      free(avp->key);
-    avp->klen = 0;
+    if (kvp->key)
+      free(kvp->key);
+    kvp->klen = 0;
     
-    if (avp->vlst)
-      free_vlst(avp->vlst);
+    if (kvp->vlst)
+      free_vlst(kvp->vlst);
   }
 }
 
-int is_status_code_msg(sip_msg_t *msg, const char *code)
+int is_status_code_message(sip_message_t *message, const char *code)
 {
-  assert(msg != NULL);
+  assert(message != NULL);
 
   int ret, vlen;
   uint8_t *val;
-  avp_t *avp;
+  kvp_t *kvp;
 
   ret = SC_FALSE;
-  avp = get_avp_from_sip_msg(msg, "header", 6, 0);
-  if (!avp) goto out;
+  kvp = get_kvp_from_sip_message(message, "header", 6, 0);
+  if (!kvp) goto out;
 
-  val = get_value_from_avp_by_idx(avp, 0, &vlen);
+  val = get_value_from_kvp_by_idx(kvp, 0, &vlen);
   if (!val) goto out;
   if (strstr((const char *)val, code))
     ret = SC_TRUE;
@@ -397,26 +389,26 @@ out:
 
 }
 
-int is_401_unauthorized_msg(sip_msg_t *msg)
+int is_401_unauthorized_message(sip_message_t *message)
 {
-  return is_status_code_msg(msg, "401");
+  return is_status_code_message(message, "401");
 }
 
-int is_200_ok_msg(sip_msg_t *msg)
+int is_200_ok_message(sip_message_t *message)
 {
-  return is_status_code_msg(msg, "200");
+  return is_status_code_message(message, "200");
 }
 
-int get_num_of_avps_from_sip_msg(sip_msg_t *msg, uint8_t *key, int klen)
+int get_num_of_kvps_from_sip_message(sip_message_t *message, uint8_t *key, int klen)
 {
-  assert(msg != NULL);
+  assert(message != NULL);
   assert(key != NULL);
   assert(klen > 0);
 
   int ret;
-  avp_t *curr;
+  kvp_t *curr;
   ret = 0;
-  curr = msg->head;
+  curr = message->head;
 
   while (curr)
   {
@@ -429,16 +421,16 @@ int get_num_of_avps_from_sip_msg(sip_msg_t *msg, uint8_t *key, int klen)
   return ret;
 }
 
-avp_t *get_avp_from_sip_msg(sip_msg_t *msg, uint8_t *key, int klen, int idx)
+kvp_t *get_kvp_from_sip_message(sip_message_t *message, uint8_t *key, int klen, int idx)
 {
-  assert(msg != NULL);
+  assert(message != NULL);
   assert(key != NULL);
   assert(klen > 0);
 
-  avp_t *ret, *curr;
+  kvp_t *ret, *curr;
 
   ret = NULL;
-  curr = msg->head;
+  curr = message->head;
 
   while (curr)
   {
@@ -458,17 +450,17 @@ avp_t *get_avp_from_sip_msg(sip_msg_t *msg, uint8_t *key, int klen, int idx)
   return ret;
 }
 
-void del_avp_from_sip_msg(sip_msg_t *msg, uint8_t *key, int klen, int idx)
+void del_kvp_from_sip_message(sip_message_t *message, uint8_t *key, int klen, int idx)
 {
-  assert(msg != NULL);
+  assert(message != NULL);
   assert(key != NULL);
   assert(klen > 0);
 
-  avp_t *res, *prev, *curr;
+  kvp_t *res, *prev, *curr;
 
   res = NULL;
   prev = NULL;
-  curr = msg->head;
+  curr = message->head;
 
   while (curr)
   {
@@ -481,12 +473,12 @@ void del_avp_from_sip_msg(sip_msg_t *msg, uint8_t *key, int klen, int idx)
       {
         res = curr;
         if (!prev)
-          msg->head = curr->next;
+          message->head = curr->next;
         else
           prev->next = curr->next;
 
-        if (msg->tail == curr)
-          msg->tail = prev;
+        if (message->tail == curr)
+          message->tail = prev;
         break;
       }
     }
@@ -496,52 +488,52 @@ void del_avp_from_sip_msg(sip_msg_t *msg, uint8_t *key, int klen, int idx)
 
   if (res)
   {
-    free_avp(res);
-    msg->num--;
+    free_kvp(res);
+    message->num--;
   }
 }
 
-int add_avp_to_sip_msg(sip_msg_t *msg, avp_t *avp, uint8_t *key, int klen, int idx)
+int add_kvp_to_sip_message(sip_message_t *message, kvp_t *kvp, uint8_t *key, int klen, int idx)
 {
-  assert(msg != NULL);
-  assert(avp != NULL);
+  assert(message != NULL);
+  assert(kvp != NULL);
 
-  avp_t *prev;
+  kvp_t *prev;
   int ret;
 
   ret = 0;
   if (!key)
-    prev = msg->tail;
+    prev = message->tail;
   else
   {
-    prev = get_avp_from_sip_msg(msg, key, klen, idx);
+    prev = get_kvp_from_sip_message(message, key, klen, idx);
 
     if (!prev)
-      prev = msg->tail;
+      prev = message->tail;
   }
 
   if (prev)
   {
-    avp->next = prev->next;
-    prev->next = avp;
+    kvp->next = prev->next;
+    prev->next = kvp;
   }
   else
   {
-    if (!msg->head)
-      msg->head = avp;
+    if (!message->head)
+      message->head = kvp;
   }
 
-  if (!prev || (prev == msg->tail))
-    msg->tail = avp;
+  if (!prev || (prev == message->tail))
+    message->tail = kvp;
 
   ret = SC_SUCCESS;
-  msg->num++;
+  message->num++;
   return ret;
 }
 
-int is_attribute_included(avp_t *avp, uint8_t *attr, int alen)
+int is_attribute_included(kvp_t *kvp, uint8_t *attr, int alen)
 {
-  assert(avp != NULL);
+  assert(kvp != NULL);
   assert(attr != NULL);
   assert(alen > 0);
 
@@ -550,7 +542,7 @@ int is_attribute_included(avp_t *avp, uint8_t *attr, int alen)
   val_t *val;
 
   ret = SC_FALSE;
-  vlst = avp->vlst;
+  vlst = kvp->vlst;
   val = vlst->head;
 
   while (val)
@@ -567,15 +559,15 @@ int is_attribute_included(avp_t *avp, uint8_t *attr, int alen)
   return ret;
 }
 
-int get_num_of_values_from_avp(avp_t *avp)
+int get_num_of_values_from_kvp(kvp_t *kvp)
 {
-  assert(avp != NULL);
-  return avp->vlst->num;
+  assert(kvp != NULL);
+  return kvp->vlst->num;
 }
 
-uint8_t *get_value_from_avp_by_idx(avp_t *avp, int idx, int *vlen)
+uint8_t *get_value_from_kvp_by_idx(kvp_t *kvp, int idx, int *vlen)
 {
-  assert(avp != NULL);
+  assert(kvp != NULL);
   assert(idx >= 0);
   assert(vlen != NULL);
 
@@ -585,7 +577,7 @@ uint8_t *get_value_from_avp_by_idx(avp_t *avp, int idx, int *vlen)
   int i;
 
   ret = NULL;
-  vlst = avp->vlst;
+  vlst = kvp->vlst;
   val = vlst->head;
 
   if (idx >= vlst->num) goto out;
@@ -601,9 +593,9 @@ out:
   return ret;
 }
 
-uint8_t *get_value_from_avp_by_name(avp_t *avp, uint8_t *attr, int alen, int *vlen)
+uint8_t *get_value_from_kvp_by_name(kvp_t *kvp, uint8_t *attr, int alen, int *vlen)
 {
-  assert(avp != NULL);
+  assert(kvp != NULL);
   assert(attr != NULL);
   assert(alen > 0);
   assert(vlen != NULL);
@@ -613,7 +605,7 @@ uint8_t *get_value_from_avp_by_name(avp_t *avp, uint8_t *attr, int alen, int *vl
   val_t *val;
 
   ret = NULL;
-  vlst = avp->vlst;
+  vlst = kvp->vlst;
   val = vlst->head;
 
   while (val)
@@ -632,9 +624,9 @@ uint8_t *get_value_from_avp_by_name(avp_t *avp, uint8_t *attr, int alen, int *vl
   return ret;
 }
 
-void change_value_from_avp_by_idx(avp_t *avp, int idx, uint8_t *value, int vlen)
+void change_value_from_kvp_by_idx(kvp_t *kvp, int idx, uint8_t *value, int vlen)
 {
-  assert(avp != NULL);
+  assert(kvp != NULL);
   assert(idx >= 0);
   assert(value != NULL);
   assert(vlen > 0);
@@ -643,7 +635,7 @@ void change_value_from_avp_by_idx(avp_t *avp, int idx, uint8_t *value, int vlen)
   val_t *val;
   int i;
 
-  vlst = avp->vlst;
+  vlst = kvp->vlst;
   val = vlst->head;
 
   for (i=0; i<idx; i++)
@@ -659,9 +651,9 @@ void change_value_from_avp_by_idx(avp_t *avp, int idx, uint8_t *value, int vlen)
   }
 }
 
-void change_value_from_avp_by_name(avp_t *avp, uint8_t *attr, int alen, uint8_t *value, int vlen)
+void change_value_from_kvp_by_name(kvp_t *kvp, uint8_t *attr, int alen, uint8_t *value, int vlen)
 {
-  assert(avp != NULL);
+  assert(kvp != NULL);
   assert(attr != NULL);
   assert(alen > 0);
   assert(value != NULL);
@@ -670,7 +662,7 @@ void change_value_from_avp_by_name(avp_t *avp, uint8_t *attr, int alen, uint8_t 
   vlst_t *vlst;
   val_t *val;
 
-  vlst = avp->vlst;
+  vlst = kvp->vlst;
   val = vlst->head;
 
   while (val)
