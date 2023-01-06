@@ -134,7 +134,7 @@ int main(int argc, char *argv[])
     val = get_value_from_kvp_by_idx(kvp, i, &vlen);
     imsg(MSG_OUTPUT_PARSER, "  Value: %.*s", vlen, val);
   }
-  str = "3 REGISTER";
+  str = "3";
   val = (uint8_t *)malloc(strlen(str));
   memcpy(val, str, strlen(str));
   vlen = strlen(val);

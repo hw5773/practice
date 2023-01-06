@@ -32,6 +32,8 @@ struct val_st
   int alen;
   uint8_t *val;
   int vlen;
+  uint8_t delimiter;
+  uint8_t space;
   struct val_st *next;
 };
 

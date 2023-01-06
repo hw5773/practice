@@ -173,19 +173,21 @@ void free_sip_message(sip_message_t *message)
   }
 }
 
-val_t *init_val(uint8_t *val, int len)
+val_t *init_val(uint8_t *val, int len, uint8_t delimiter, uint8_t space)
 {
   val_t *ret;
   int tlen;
   uint8_t *p, *t;
   uint8_t tmp[SC_BUF_LENGTH] = {0, };
+  uint8_t inside;
   ret = (val_t *)calloc(1, sizeof(val_t));
 
   p = val;
   t = tmp;
+  inside = 0;
   while (p - val <= len)
   {
-    if (*p == '=')
+    if (!inside && *p == '=')
     {
       tlen = t-tmp;
       ret->attr = (uint8_t *)calloc(1, tlen);
@@ -193,7 +195,7 @@ val_t *init_val(uint8_t *val, int len)
       ret->alen = tlen;
       t = tmp;
     }
-    else if (p - val == len)
+    else if (!inside && (p - val == len))
     {
       tlen = t-tmp;
       ret->val = (uint8_t *)calloc(1, tlen);
@@ -202,11 +204,17 @@ val_t *init_val(uint8_t *val, int len)
     }
     else
     {
+      if (!inside && *p == '\"')
+        inside = 1;
+      if (inside && *p == '\"')
+        inside = 0;
       *(t++) = *p;
     }
 
     p++;
   }
+  ret->delimiter = delimiter;
+  ret->space = space;
 
   return ret;
 }
@@ -241,9 +249,6 @@ uint8_t *serialize_value(kvp_t *kvp, int *vlen)
   val = vlst->head;
   while (val)
   {
-    if (val != vlst->head)
-      *(p++) = ';';
-
     if (val->attr)
     {
       memcpy(p, val->attr, val->alen);
@@ -252,6 +257,12 @@ uint8_t *serialize_value(kvp_t *kvp, int *vlen)
     }
     memcpy(p, val->val, val->vlen);
     p += val->vlen;
+    
+    if (val->delimiter)
+      *(p++) = val->delimiter;
+
+    if (val->space)
+      *(p++) = ' ';
 
     val = val->next;
   }
@@ -288,7 +299,8 @@ vlst_t *init_vlst(uint8_t *value, int vlen)
 {
   vlst_t *ret;
   val_t *val;
-  int tlen;
+  int i, tlen;
+  uint8_t space, inside;
   uint8_t *p, *q;
   uint8_t tmp[SC_BUF_LENGTH] = {0, };
   
@@ -296,12 +308,50 @@ vlst_t *init_vlst(uint8_t *value, int vlen)
 
   p = value;
   q = tmp;
+  space = 0;
+  inside = 0;
   while (p - value <= vlen)
   {
-    if (*p == ';' || *p == '\n' || p - value == vlen)
+    if (!inside && (*p == ';'))
     {
       tlen = q - tmp;
-      val = init_val(tmp, tlen);
+      val = init_val(tmp, tlen, *p, 0);
+      add_val_to_vlst(ret, val);
+      ret->num += 1;
+      q = tmp;
+      memset(tmp, 0, SC_BUF_LENGTH);
+    }
+    else if (!inside && (p - value == vlen))
+    {
+      tlen = q - tmp;
+      val = init_val(tmp, tlen, 0, 0);
+      add_val_to_vlst(ret, val);
+      ret->num += 1;
+      q = tmp;
+      memset(tmp, 0, SC_BUF_LENGTH);
+    }
+    else if (!inside && *p == ' ')
+    {
+      tlen = q - tmp;
+      val = init_val(tmp, tlen, 0, 1);
+      add_val_to_vlst(ret, val);
+      ret->num += 1;
+      q = tmp;
+      memset(tmp, 0, SC_BUF_LENGTH);
+    }
+    else if (!inside && *p == ',')
+    {
+      tlen = q - tmp;
+      if (*(p+1) == ' ')
+      {
+        p++;
+        space = 1;
+      }
+      else
+      {
+        space = 0;
+      }
+      val = init_val(tmp, tlen, ',', space);
       add_val_to_vlst(ret, val);
       ret->num += 1;
       q = tmp;
@@ -309,6 +359,10 @@ vlst_t *init_vlst(uint8_t *value, int vlen)
     }
     else
     {
+      if (!inside && *p == '<')
+        inside = 1;
+      if (inside && *p == '>')
+        inside = 0;
       *(q++) = *p;
     }
     p++;
