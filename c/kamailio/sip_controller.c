@@ -741,3 +741,59 @@ void change_value_from_kvp_by_name(kvp_t *kvp, uint8_t *attr, int alen, uint8_t 
     val = val->next;
   }
 }
+
+void del_value_from_kvp_by_idx(kvp_t *kvp, int idx)
+{
+  assert(kvp != NULL);
+  assert(idx >= 0);
+
+  vlst_t *vlst;
+  val_t *prev, *curr;
+  int i;
+
+  vlst = kvp->vlst;
+  prev = NULL;
+  curr = vlst->head;
+
+  for (i=0; i<idx; i++)
+  {
+    if (i == idx-1)
+      prev = curr;
+    curr = curr->next;
+  }
+
+  if (prev)
+    prev->next = curr->next;
+  else
+    vlst->head = curr->next;
+  free_val(curr);
+}
+
+void del_value_from_kvp_by_name(kvp_t *kvp, uint8_t *attr, int alen)
+{
+  assert(kvp != NULL);
+  assert(attr != NULL);
+  assert(alen > 0);
+
+  vlst_t *vlst;
+  val_t *prev, *curr;
+
+  vlst = kvp->vlst;
+  prev = NULL;
+  curr = vlst->head;
+
+  while (curr)
+  {
+    if (curr->alen == alen 
+        && !strncmp(curr->attr, attr, alen))
+      break;
+    prev = curr;
+    curr = curr->next;
+  }
+
+  if (prev)
+    prev->next = curr->next;
+  else
+    vlst->head = curr->next;
+  free_val(curr);
+}

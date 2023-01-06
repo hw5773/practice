@@ -80,5 +80,7 @@ uint8_t *get_value_from_kvp_by_idx(kvp_t *kvp, int idx, int *vlen);
 uint8_t *get_value_from_kvp_by_name(kvp_t *kvp, uint8_t *attr, int alen, int *vlen);
 void change_value_from_kvp_by_idx(kvp_t *kvp, int idx, uint8_t *value, int vlen);
 void change_value_from_kvp_by_name(kvp_t *kvp, uint8_t *attr, int alen, uint8_t *value, int vlen);
+void del_value_from_kvp_by_idx(kvp_t *kvp, int idx);
+void del_value_from_kvp_by_name(kvp_t *kvp, uint8_t *attr, int alen);
 
 #endif /* __SIP_CONTROLLER_H__ */

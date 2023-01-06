@@ -26,7 +26,7 @@ int main(int argc, char *argv[])
   int c, i, len, rlen, vlen, vint, num;
   sip_message_t *message;
   kvp_t *kvp, *tmp, *storage[10];
-  const uint8_t *str;
+  const uint8_t *str, *nonce;
   uint8_t *res, *val;
   uint8_t found;
 
@@ -34,6 +34,7 @@ int main(int argc, char *argv[])
   pname = argv[0];
   dtype = MSG_OUTPUT_PARSER;
   found = SC_FALSE;
+  nonce = "0000000000000000000000000000000000000000000=";
 
   while (1)
   {
@@ -142,13 +143,25 @@ int main(int argc, char *argv[])
   change_value_from_kvp_by_idx(kvp, 0, val, vlen);
   free(val);
 
+  kvp = get_kvp_from_sip_message(message, "WWW-Authenticate", 16, 0);
+  vlen = strlen(nonce);
+  val = (uint8_t *)malloc(vlen);
+  memcpy(val, nonce, vlen);
+  change_value_from_kvp_by_name(kvp, "nonce", 5, val, vlen);
+  free(val);
+
   imsg(MSG_OUTPUT_PARSER, "After modification");
   print_sip_message(message);
   printf("\n");
 
   res = serialize_sip_message(message, &rlen);
+  imsg(MSG_OUTPUT_PARSER, "Modified message (%d bytes): %s", rlen, res);
+
+  del_value_from_kvp_by_name(kvp, "nonce", 5);
+  res = serialize_sip_message(message, &rlen);
+  imsg(MSG_OUTPUT_PARSER, "Nonce removed message (%d bytes): %s", rlen, res);
+
   free_sip_message(message);
-  imsg(MSG_OUTPUT_PARSER, "Final message (%d bytes): %s", rlen, res);
 
 out:
   return 0;
