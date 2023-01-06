@@ -18,6 +18,15 @@ int read_message(char *input, char *buf, int max)
   fseek(fp, 0L, SEEK_SET);
   fread(buf, 1, len, fp);
 
+  int i;
+  for (i=0; i<len; i++)
+  {
+    if (buf[i] == '\r')
+      printf("buf[i] == '\\r'!\n");
+    if (buf[i] == '\n')
+      printf("buf[i] == '\\n'!\n");
+  }
+
   return len;
 }
 
@@ -52,7 +61,7 @@ sip_message_t *init_sip_message(char *buf, int len)
       flag = (flag + 1) % 2;
       kset = 1;
     }
-    else if (*c == '\r')
+    else if (*c == '\n')
     {
       flag = (flag + 1) % 2;
       klen = p[SC_KEY_IDX] - key;
@@ -86,6 +95,7 @@ sip_message_t *init_sip_message(char *buf, int len)
       {
         kvp = init_kvp(k, klen, v, vlen);
         add_kvp_to_sip_message(ret, kvp, NULL, 0, 0);
+        printf("kvp: key (%d bytes): %.*s\n", kvp->klen, kvp->klen, kvp->key);
       }
 
       p[SC_KEY_IDX] = key;
