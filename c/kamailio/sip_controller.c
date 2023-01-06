@@ -180,8 +180,10 @@ val_t *init_val(uint8_t *val, int len, uint8_t delimiter, uint8_t space)
   uint8_t *p, *t;
   uint8_t tmp[SC_BUF_LENGTH] = {0, };
   uint8_t inside;
-  ret = (val_t *)calloc(1, sizeof(val_t));
 
+  printf("  init_val(): val: %.*s, len: %d, delimiter: %c, space: %d\n", len, val, len, delimiter, space);
+
+  ret = (val_t *)calloc(1, sizeof(val_t));
   p = val;
   t = tmp;
   inside = 0;
@@ -193,6 +195,7 @@ val_t *init_val(uint8_t *val, int len, uint8_t delimiter, uint8_t space)
       ret->attr = (uint8_t *)calloc(1, tlen);
       memcpy(ret->attr, tmp, tlen);
       ret->alen = tlen;
+      printf("    attr: %.*s, alen: %d\n", ret->alen, ret->attr, ret->alen);
       t = tmp;
     }
     else if (!inside && (p - val == len))
@@ -201,13 +204,12 @@ val_t *init_val(uint8_t *val, int len, uint8_t delimiter, uint8_t space)
       ret->val = (uint8_t *)calloc(1, tlen);
       memcpy(ret->val, tmp, tlen);
       ret->vlen = tlen;
+      printf("    val: %.*s, vlen: %d\n", ret->vlen, ret->val, ret->vlen);
     }
     else
     {
-      if (!inside && *p == '\"')
-        inside = 1;
-      if (inside && *p == '\"')
-        inside = 0;
+      if (*p == '\"')
+        inside = (inside + 1) % 2;
       *(t++) = *p;
     }
 
@@ -359,10 +361,12 @@ vlst_t *init_vlst(uint8_t *value, int vlen)
     }
     else
     {
-      if (!inside && *p == '<')
+      if (*p == '<')
         inside = 1;
-      if (inside && *p == '>')
+      if (*p == '>')
         inside = 0;
+      if (*p == '\"')
+        inside = (inside + 1) % 2;
       *(q++) = *p;
     }
     p++;
@@ -433,7 +437,7 @@ int is_status_code_message(sip_message_t *message, const char *code)
   kvp = get_kvp_from_sip_message(message, "header", 6, 0);
   if (!kvp) goto out;
 
-  val = get_value_from_kvp_by_idx(kvp, 0, &vlen);
+  val = get_value_from_kvp_by_idx(kvp, 1, &vlen);
   if (!val) goto out;
   if (strstr((const char *)val, code))
     ret = SC_TRUE;
