@@ -65,13 +65,18 @@ void print_sip_msg(sip_msg_t *msg);
 avp_t *init_avp(uint8_t *key, int klen, uint8_t *value, int vlen);
 void free_avp(avp_t *avp);
 
+int is_401_unauthorized_msg(sip_msg_t *msg);
+int is_200_ok_msg(sip_msg_t *msg);
 int get_num_of_avps_from_sip_msg(sip_msg_t *msg, uint8_t *key, int klen);
 avp_t *get_avp_from_sip_msg(sip_msg_t *msg, uint8_t *key, int klen, int idx);
 int add_avp_to_sip_msg(sip_msg_t *msg, avp_t *avp, uint8_t *key, int klen, int idx);
 void del_avp_from_sip_msg(sip_msg_t *msg, uint8_t *key, int klen, int idx);
 
 int is_attribute_included(avp_t *avp, uint8_t *attr, int alen);
-uint8_t *get_value_from_avp(avp_t *avp, uint8_t *attr, int alen, int *vlen);
-void change_value_from_avp(avp_t *avp, uint8_t *attr, int alen, uint8_t *value, int vlen);
+int get_num_of_values_from_avp(avp_t *avp);
+uint8_t *get_value_from_avp_by_idx(avp_t *avp, int idx, int *vlen);
+uint8_t *get_value_from_avp_by_name(avp_t *avp, uint8_t *attr, int alen, int *vlen);
+void change_value_from_avp_by_idx(avp_t *avp, int idx, uint8_t *value, int vlen);
+void change_value_from_avp_by_name(avp_t *avp, uint8_t *attr, int alen, uint8_t *value, int vlen);
 
 #endif /* __SIP_CONTROLLER_H__ */

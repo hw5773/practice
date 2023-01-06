@@ -26,6 +26,7 @@ int main(int argc, char *argv[])
   int c, i, len, rlen, vlen, vint, num;
   sip_msg_t *msg;
   avp_t *avp, *tmp, *storage[10];
+  const uint8_t *str;
   uint8_t *res, *val;
   uint8_t found;
 
@@ -74,6 +75,24 @@ int main(int argc, char *argv[])
   len = read_msg(input, buf, BUF_SIZE);
   msg = parse_sip_msg(buf, len);
 
+  if (is_401_unauthorized_msg(msg))
+  {
+    imsg(MSG_OUTPUT_PARSER, "This SIP message is a 401 unauthorized message");
+  }
+  else
+  {
+    imsg(MSG_OUTPUT_PARSER, "This SIP message is not a 401 unauthorized message");
+  }
+
+  if (is_200_ok_msg(msg))
+  {
+    imsg(MSG_OUTPUT_PARSER, "This SIP message is a 200 OK message");
+  }
+  else
+  {
+    imsg(MSG_OUTPUT_PARSER, "This SIP message is NOT a 200 OK message");
+  }
+
   imsg(MSG_OUTPUT_PARSER, "Before modification");
   print_sip_msg(msg);
   printf("\n");
@@ -97,15 +116,31 @@ int main(int argc, char *argv[])
 
   if (found)
   {
-    val = get_value_from_avp(avp, "rport", 5, &vlen);
+    val = get_value_from_avp_by_name(avp, "rport", 5, &vlen);
     vint = atoi(val) - 30000;
     free(val);
     val = (uint8_t *)calloc(6, sizeof(uint8_t));
     vlen = snprintf(val, 6, "%d", vint);
     
-    change_value_from_avp(avp, "rport", 5, val, vlen);
+    change_value_from_avp_by_name(avp, "rport", 5, val, vlen);
     free(val);
   }
+
+  avp = get_avp_from_sip_msg(msg, "CSeq", 4, 0);
+  num = get_num_of_values_from_avp(avp);
+  imsg(MSG_OUTPUT_PARSER, "  # of values: %d", num);
+  for (i=0; i<num; i++)
+  {
+    val = get_value_from_avp_by_idx(avp, i, &vlen);
+    imsg(MSG_OUTPUT_PARSER, "  Value: %.*s", vlen, val);
+  }
+  str = "3 REGISTER";
+  val = (uint8_t *)malloc(strlen(str));
+  memcpy(val, str, strlen(str));
+  vlen = strlen(val);
+
+  change_value_from_avp_by_idx(avp, 0, val, vlen);
+  free(val);
 
   imsg(MSG_OUTPUT_PARSER, "After modification");
   print_sip_msg(msg);

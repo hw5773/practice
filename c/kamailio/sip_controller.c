@@ -311,6 +311,7 @@ vlst_t *init_vlst(uint8_t *value, int vlen)
       tlen = q - tmp;
       val = init_val(tmp, tlen);
       add_val_to_vlst(ret, val);
+      ret->num += 1;
       q = tmp;
       memset(tmp, 0, SC_BUF_LENGTH);
     }
@@ -372,6 +373,38 @@ void free_avp(avp_t *avp)
     if (avp->vlst)
       free_vlst(avp->vlst);
   }
+}
+
+int is_status_code_msg(sip_msg_t *msg, const char *code)
+{
+  assert(msg != NULL);
+
+  int ret, vlen;
+  uint8_t *val;
+  avp_t *avp;
+
+  ret = SC_FALSE;
+  avp = get_avp_from_sip_msg(msg, "header", 6, 0);
+  if (!avp) goto out;
+
+  val = get_value_from_avp_by_idx(avp, 0, &vlen);
+  if (!val) goto out;
+  if (strstr((const char *)val, code))
+    ret = SC_TRUE;
+
+out:
+  return ret;
+
+}
+
+int is_401_unauthorized_msg(sip_msg_t *msg)
+{
+  return is_status_code_msg(msg, "401");
+}
+
+int is_200_ok_msg(sip_msg_t *msg)
+{
+  return is_status_code_msg(msg, "200");
 }
 
 int get_num_of_avps_from_sip_msg(sip_msg_t *msg, uint8_t *key, int klen)
@@ -534,7 +567,41 @@ int is_attribute_included(avp_t *avp, uint8_t *attr, int alen)
   return ret;
 }
 
-uint8_t *get_value_from_avp(avp_t *avp, uint8_t *attr, int alen, int *vlen)
+int get_num_of_values_from_avp(avp_t *avp)
+{
+  assert(avp != NULL);
+  return avp->vlst->num;
+}
+
+uint8_t *get_value_from_avp_by_idx(avp_t *avp, int idx, int *vlen)
+{
+  assert(avp != NULL);
+  assert(idx >= 0);
+  assert(vlen != NULL);
+
+  uint8_t *ret;
+  vlst_t *vlst;
+  val_t *val;
+  int i;
+
+  ret = NULL;
+  vlst = avp->vlst;
+  val = vlst->head;
+
+  if (idx >= vlst->num) goto out;
+
+  for (i=0; i<idx; i++)
+    val = val->next;
+  
+  ret = (uint8_t *)malloc(val->vlen);
+  memcpy(ret, val->val, val->vlen);
+  *vlen = val->vlen;
+
+out:
+  return ret;
+}
+
+uint8_t *get_value_from_avp_by_name(avp_t *avp, uint8_t *attr, int alen, int *vlen)
 {
   assert(avp != NULL);
   assert(attr != NULL);
@@ -565,7 +632,34 @@ uint8_t *get_value_from_avp(avp_t *avp, uint8_t *attr, int alen, int *vlen)
   return ret;
 }
 
-void change_value_from_avp(avp_t *avp, uint8_t *attr, int alen, uint8_t *value, int vlen)
+void change_value_from_avp_by_idx(avp_t *avp, int idx, uint8_t *value, int vlen)
+{
+  assert(avp != NULL);
+  assert(idx >= 0);
+  assert(value != NULL);
+  assert(vlen > 0);
+
+  vlst_t *vlst;
+  val_t *val;
+  int i;
+
+  vlst = avp->vlst;
+  val = vlst->head;
+
+  for (i=0; i<idx; i++)
+    val = val->next;
+
+  if (val)
+  {
+    if (val->val)
+      free(val->val);
+    val->val = (uint8_t *)malloc(vlen);
+    memcpy(val->val, value, vlen);
+    val->vlen = vlen;
+  }
+}
+
+void change_value_from_avp_by_name(avp_t *avp, uint8_t *attr, int alen, uint8_t *value, int vlen)
 {
   assert(avp != NULL);
   assert(attr != NULL);
