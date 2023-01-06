@@ -18,15 +18,6 @@ int read_message(char *input, char *buf, int max)
   fseek(fp, 0L, SEEK_SET);
   fread(buf, 1, len, fp);
 
-  int i;
-  for (i=0; i<len; i++)
-  {
-    if (buf[i] == '\r')
-      printf("buf[i] == '\\r'!\n");
-    if (buf[i] == '\n')
-      printf("buf[i] == '\\n'!\n");
-  }
-
   return len;
 }
 
@@ -86,7 +77,7 @@ sip_message_t *init_sip_message(char *buf, int len)
         vlen--;
       }
 
-      while (*(v + vlen - 1) == ' ')
+      while (*(v + vlen - 1) == ' ' || *(v + vlen - 1) == '\r')
       {
         vlen--;
       }
@@ -138,10 +129,12 @@ uint8_t *serialize_sip_message(sip_message_t *message, int *len)
     vtmp = serialize_value(curr, &vlen);
     memcpy(p, vtmp, vlen);
     p += vlen;
+    *(p++) = '\r';
     *(p++) = '\n';
     curr = curr->next;
   }
   
+  *(p++) = '\r';
   *(p++) = '\n';
   *len = p - tmp;
   ret = (uint8_t *)malloc(*len);
@@ -337,7 +330,7 @@ vlst_t *init_vlst(uint8_t *value, int vlen)
     else if (!inside && (p - value == vlen))
     {
       tlen = q - tmp;
-      val = init_val(tmp, tlen, '\r', 0);
+      val = init_val(tmp, tlen, 0, 0);
       add_val_to_vlst(ret, val);
       ret->num += 1;
       q = tmp;
