@@ -1,4 +1,5 @@
 #include "sip_controller.h"
+//#include "dprint.h"
 
 uint8_t *serialize_value(kvp_t *kvp, int *vlen);
 
@@ -51,7 +52,7 @@ sip_message_t *init_sip_message(char *buf, int len)
       flag = (flag + 1) % 2;
       kset = 1;
     }
-    else if (*c == '\n')
+    else if (*c == '\r')
     {
       flag = (flag + 1) % 2;
       klen = p[SC_KEY_IDX] - key;
@@ -181,7 +182,7 @@ val_t *init_val(uint8_t *val, int len, uint8_t delimiter, uint8_t space)
   uint8_t tmp[SC_BUF_LENGTH] = {0, };
   uint8_t inside;
 
-  printf("  init_val(): val: %.*s, len: %d, delimiter: %c, space: %d\n", len, val, len, delimiter, space);
+  printf("  init_val(): val: %.*s, len: %d, delimiter: %d, space: %d\n", len, val, len, delimiter, space);
 
   ret = (val_t *)calloc(1, sizeof(val_t));
   p = val;
@@ -326,7 +327,7 @@ vlst_t *init_vlst(uint8_t *value, int vlen)
     else if (!inside && (p - value == vlen))
     {
       tlen = q - tmp;
-      val = init_val(tmp, tlen, 0, 0);
+      val = init_val(tmp, tlen, '\r', 0);
       add_val_to_vlst(ret, val);
       ret->num += 1;
       q = tmp;

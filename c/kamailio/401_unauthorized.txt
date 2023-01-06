@@ -1,15 +1,13 @@
 SIP/2.0 401 Unauthorized |
-f: <sip:310260248416121@ims.mnc260.mcc310.3gppnetwork.org>;tag=4080435617
+f: <sip:310260248416121@ims.mnc260.mcc310.3gppnetwork.org>;tag=4107823015
 t: <sip:310260248416121@ims.mnc260.mcc310.3gppnetwork.org>;tag=c106c02ec13758cfe3e38314f3525ff9-24a43e6c
-CSeq: 859210140 REGISTER
-i: 4080435612_3859142508@2607:fc20:ba53:1539:747c:49ff:fe25:eb67
-Via: SIP/2.0/TCP 127.0.0.2:4060;branch=z9hG4bKa21d.27b8f3e735e81bfd3f549887d2a4b2d7.1;i=1
-Via: SIP/2.0/TCP 127.0.0.1;branch=z9hG4bKa21d.907bb2b06791418264fde073ec27c381.0;i=1
-v: SIP/2.0/TCP [2607:fc20:ba53:1539:747c:49ff:fe25:eb67]:5060;rport=40017;branch=z9hG4bK1747701635;keep
-WWW-Authenticate: Digest realm="ims.mnc260.mcc310.3gppnetwork.org", nonce="013xPMTN5utxN1zxeOqZ5QZNs85+gwAAlMqDzUFKQQU=", algorithm=AKAv1-MD5, ck="f31bfc9a951755bf2c96f67873ec3da9", ik="ca22e260242337f97721aa4de7db271b", qop="auth,auth-int"
+CSeq: 886597538 REGISTER
+i: 4107823010_3857871420@2607:fc20:ba53:1539:bc02:3cff:feb6:b823
+Via: SIP/2.0/TCP 127.0.0.2:4060;branch=z9hG4bK64f6.fc2d38a267ab19192aa0c5e10caf4a4f.1;i=1
+Via: SIP/2.0/TCP 127.0.0.1;branch=z9hG4bK64f6.66ba4b4b9280bac5334f3588c7c468fa.0;i=1
+v: SIP/2.0/TCP [2607:fc20:ba53:1539:bc02:3cff:feb6:b823]:5060;rport=41811;branch=z9hG4bK308454589;keep
+WWW-Authenticate: Digest realm="ims.mnc260.mcc310.3gppnetwork.org", nonce="kKN1IIy//3gCjqsJSe8nynzrlF2TwwAA6GWk0qYHT40=", algorithm=AKAv1-MD5, ck="e6c677d81c53a15e1391eb891247e08c", ik="fc4bf29e01d3778b0519e415603270b7", qop="auth,auth-int"
 Path: <sip:term@pcscf.ims.mnc260.mcc310.3gppnetwork.org;lr>
 Server: T-mobile
 Content-Length: 0
-
-
 
