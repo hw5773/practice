@@ -15,5 +15,6 @@ int main()
   char buf[0x28];
   printf("Input: ");
   scanf("%s", buf);
+  printf("get_shell: %p\n", get_shell);
   return 0;
 }

