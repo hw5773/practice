@@ -1,31 +1,11 @@
-import pandas as pd
 import numpy as np
-import matplotlib.pylab as plt
-from datetime import datetime
+import pandas as pd
+import matplotlib.pyplot as plt
 
-data = pd.read_csv("AirPassengers.csv")
+from tqdm import trange
+import random
+
+data = pd.read_csv("data.csv", encoding="CP949")
+plt.figure(figsize=(20, 5))
+plt.plot(range(len(data)), data["평균속도"])
 print (data.head())
-print ("  Data Types:")
-print (data.dtypes)
-
-con = data["Month"]
-data["Month"] = pd.to_datetime(data["Month"])
-data.set_index("Month", inplace=True)
-print (data.index)
-
-ts = data['#Passengers']
-print (ts.head(10))
-
-print ("ts[\'1949-01-01\']")
-print (ts['1949-01-01'])
-
-print ("ts[datetime(1949,1,1)]")
-print (ts[datetime(1949,1,1)])
-
-print ("ts[\'1949-01-01\':\'1949-05-01\']")
-print (ts['1949-01-01':'1949-05-01'])
-
-print ("ts[:\'1949-05-01\']")
-print (ts[:'1949-05-01'])
-
-plt.plot(ts)
